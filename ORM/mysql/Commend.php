@@ -190,7 +190,153 @@
     }
      
     
+    public function Build()
+    {
+         $this->_query = (isset($this->_buildquery["is_distinct"]) && $this->_buildquery["is_distinct"]==true)?'select DISTINCT ':'select ';
+        
+        $this->_query .= (isset($this->_buildquery["select"]) && !empty($this->_buildquery["select"]))?$this->_buildquery["select"]:'*';
+        
+        if(isset($this->_buildquery["from"]) && !empty($this->_buildquery["from"]))
+           $this->_query .=" from ".$this->_buildquery["from"];
+        
+        
+         if(isset($this->_buildquery["join"]) && !empty($this->_buildquery["join"]))
+           $this->_query .="  join ".$this->_buildquery["join"];
+        
+        
+        if(isset($this->_buildquery["where"]) && !empty($this->_buildquery["where"]))
+           $this->_query .="   where ".$this->_buildquery["where"];
+        
+        if(isset($this->_buildquery["group"]) && !empty($this->_buildquery["group"]))
+           $this->_query .="  group by ".$this->_buildquery["group"];
+        
+        if(isset($this->_buildquery["order"]) && !empty($this->_buildquery["order"]))
+           $this->_query .=" order by ".$this->_buildquery["order"];
+        
+       
+        return $this;
+        
+        
+    }
     
+    
+    private function QueryInternal($type , $associative)
+    {
+        if($this->_return != null)
+        {
+            
+            $column_num = mysql_num_fields($this->_return);
+            for ($i=0; $i < $column_num; $i++)
+            {
+                $this->_columns[] = mysql_field_name($this->_return, $i);
+            }
+            
+           while($row = mysql_fetch_array($this->_return, MYSQL_ASSOC)) 
+           {
+              $sub_arr = array();  
+              foreach($this->_columns as $column) 
+              {
+                  if($associative) $sub_arr[$column] = $row[$column];
+                  else $sub_arr[] = $row[$column];
+              }
+              
+              $this->_result[] = $sub_arr;
+              if($type == "row") break;
+            
+            }
+            
+        }  
+        
+    }
+    
+    /* build query according to type (query , non-query)
+    *
+    */
+    private function BuildQuery()
+    {
+         if(is_array($this->_columval) && count($this->_columval) >0)
+         {
+              foreach($this->_columval as $key=>$val)
+              {
+                  $val = mysql_real_escape_string($val);
+                  $this->_query = str_replace($key, $val, $this->_query);
+                        
+              }
+                    
+          }
+        
+        if(is_array($this->_condition) && count($this->_condition) > 0)
+        {
+            
+             
+            $this->_query.="where ";
+            foreach($this->_condition as $key=>$valarr)
+            {
+                foreach($valarr as $k=>$v)
+                {
+                    $i=0;
+                    foreach($v as $column=>$colval)
+                    {
+                        $colval = mysql_real_escape_string($colval);
+                        if(!empty($this->ConditionSymbol($k)))
+                        {
+                            if($i == count($v)-1) $this->_query.= " ".$column.$this->ConditionSymbol($k)."'$colval'"." ";
+                            else $this->_query.= " ".$column.$this->ConditionSymbol($k)."'$colval'"." ".$key." ";
+                            
+                        }
+                        
+                       $i++;  
+                    }
+                    
+                    
+                    
+                }
+            }
+            
+            
+            
+        }
+        
+  
+    }
+    
+    private function ConditionSymbol($symbol)
+    {
+        switch($symbol)
+        {
+                
+             case "gt": 
+                return ">";
+                break;
+             case "ls": 
+                return "<";
+                break;
+             case "lseq": 
+                return "<=";
+                break;
+             case "gteq": 
+                return ">=";
+                break;
+              case "eq": 
+                return "=";
+                break;  
+        
+        }
+        
+        return "";
+        
+        
+    }
+	
+    private function QueryDb()
+    {
+        
+        $this->_return = mysql_query( $this->_query , $this->_connection ); 
+        if(!$this->_return) {
+            throw new Exception('Error In query' . mysql_error());
+        }
+        
+    } 
 }
 
 
