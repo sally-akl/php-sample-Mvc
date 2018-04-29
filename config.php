@@ -11,6 +11,7 @@ return array(
           "Password"=>"",
           "Dbname"=>""
     ),
+	"theme"=>dirname(__FILE__)."/Views/main.php",
     "mainpath"=>"http://$_SERVER[HTTP_HOST]/caseTest",
 )
 
